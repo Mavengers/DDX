@@ -11,6 +11,8 @@
 
 #define CH_STEERING 0
 #define CH_THROTTLE 1
+#define CH_PARK 2
+#define CH_MODE 3
 
 #define CAR_MODE_MANUAL 0
 #define CAR_MODE_SEMI_AUTO 1
@@ -49,13 +51,13 @@ struct struct_message {
   int throttle; // 油门值
   int steering; // 转向值
   int mode; //驾驶模式，0为遥控模式，1为自动方向和手动油门模式，2为自动驾驶模式
-  bool park;  //停车状态，0为停车，1为起步
+  int park;  //停车状态，0为停车，1为起步
 } ;
 
-struct struct_message esp_now_data = {0, 0, 0, false}; // Initialize the structure at declaration
-struct struct_message rc_data = {0, 0, 0, false}; // Initialize the structure at declaration
-struct struct_message pilot_data = {0, 0, 0, false}; // Initialize the structure at declaration
-struct struct_message car_output = {0, 0, 0, false}; // Initialize the structure at declaration
+struct struct_message esp_now_data = {0, 0, 0, 0}; // Initialize the structure at declaration
+struct struct_message rc_data = {0, 0, 0, 0}; // Initialize the structure at declaration
+struct struct_message pilot_data = {0, 0, 0, 0}; // Initialize the structure at declaration
+struct struct_message car_output = {0, 0, 0, 0}; // Initialize the structure at declaration
 
 const int PWM_MIN = 819; // 'minimum' pulse length count (out of 4096)
 const int PWM_MAX = 1638; // 'maximum' pulse length count (out of 4096)
@@ -151,10 +153,12 @@ void loop() {
   
   rc_data.steering = pwm_value[CH_STEERING];
   rc_data.throttle = pwm_value[CH_THROTTLE];
-  rc_data.mode = pwm_value[2];
-  rc_data.park = pwm_value[3];
+  rc_data.park = pwm_value[CH_PARK];
+  rc_data.mode = pwm_value[CH_MODE];
 
-  car_output;
+  mode_change();
+
+  
 
   if(car_output.mode== CAR_MODE_FULL_AUTO) {
     // Controlled by Pilot
@@ -186,10 +190,14 @@ void loop() {
   }
   // Serial.println();
 
+
   // CAR val to -100~100
   car_output.steering = map(car_output.steering-1488,872-1488,2113-1488,-100,100);
   car_output.throttle = map(car_output.throttle-1493,888-1493,2149-1493,-100,100);
-
+ 
+  if(car_output.park == 1){
+    car_output.throttle = 0;
+  }
   // Pilot => CAR
   int s1 = map(car_output.steering,-100,100,SERVO_MID-SERVO_RANGE,SERVO_MID+SERVO_RANGE);
   int t1 = map(car_output.throttle,-100,100,MOTOR_MID-MOTOR_RANGE,MOTOR_MID+MOTOR_RANGE);
@@ -197,9 +205,18 @@ void loop() {
   s1 = min(max(s1,PWM_MIN),PWM_MAX);
   t1 = min(max(t1,PWM_MIN),PWM_MAX);
 
-  Serial.printf("  %d, %d\t%d, %d\n", car_output.steering, s1, car_output.throttle, t1 );
+  Serial.printf("  %d, %d, %d, %d, %d\n", car_output.steering, s1, car_output.throttle, t1, car_output.park );
   ledcWrite(CH_STEERING,s1);
   ledcWrite(CH_THROTTLE,t1);
+
+  if(rc_data.park < 1500){
+    car_output.park = 0;
+  }
+  else{
+    car_output.park = 1;
+  }
+  Serial.printf("rc_data.park: %d ,car_output.park: %d \n", rc_data.park,car_output.park);
+
 
   delay(10);
 }
