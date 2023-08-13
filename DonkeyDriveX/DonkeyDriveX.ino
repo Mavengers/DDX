@@ -1,6 +1,8 @@
 // #include <esp_now.h>
 // #include <WiFi.h>
 
+// #define DEBUG  // Uncomment to enable debugging output
+
 #define CH1_PIN 4  //接收机pwm输入CH1通道为，GPIO4
 #define CH2_PIN 5  //接收机pwm输入CH2通道为，GPIO5
 #define CH3_PIN 6  //接收机pwm输入CH3通道为，GPIO6
@@ -179,22 +181,11 @@ void loop() {
     // Controlled by RC Controller
 
     // RC => CAR
-    // car_output.throttle = rc_data.throttle;
-    // car_output.steering = rc_data.steering;
-    // CAR val to -100~100
     car_output.steering = map(rc_data.steering-1488,872-1488,2113-1488,-100,100);
     car_output.throttle = map(rc_data.throttle-1493,888-1493,2149-1493,-100,100);
 
-    // CAR => Pilotpark_changepwm_steering
-    // pilot_data.throttle = map(car_output.throttle,100,-100,MOTOR_MID-MOTOR_RANGE,MOTOR_MID+MOTOR_RANGE);
-    // pilot_data.steering = map(car_output.steering,100,-100,SERVO_MID-SERVO_RANGE,SERVO_MID+SERVO_RANGE);
-
-    // Serial.printf("T%dS%d\n", , );
-  }
-
-  // Read the RC receiver values
-  for (int i = 0; i < 4; i++) {
-    Serial.print(" CH"); Serial.print(i + 1); Serial.print(": "); Serial.print(pwm_value[i]);
+    // CAR => Pilot
+    Serial.printf("T%dS%d\n",car_output.throttle,car_output.steering);
   }
 
   if(car_output.park == 1){
@@ -207,10 +198,17 @@ void loop() {
   pwm_steering = min(max(pwm_steering,PWM_MIN),PWM_MAX);
   pwm_throttle = min(max(pwm_throttle,PWM_MIN),PWM_MAX);
 
+  
+  #ifdef DEBUG // Print the values for debugging
+  // Read the RC receiver values
+  for (int i = 0; i < 4; i++) {
+    Serial.print(" CH"); Serial.print(i + 1); Serial.print(": "); Serial.print(pwm_value[i]);
+  }
   Serial.printf("  %d, %d, %d, %d, %d\n", car_output.steering, pwm_steering, car_output.throttle, pwm_throttle, car_output.park );
+  #endif
+  
   ledcWrite(CH_STEERING,pwm_steering);
   ledcWrite(CH_THROTTLE,pwm_throttle);
-
 
   delay(10);
 }
