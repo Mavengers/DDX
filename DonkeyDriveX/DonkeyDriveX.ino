@@ -1,5 +1,6 @@
 // #include <esp_now.h>
 // #include <WiFi.h>
+#include <Wire.h>
 
 // #define DEBUG  // Uncomment to enable debugging output
 
@@ -113,8 +114,68 @@ void mode_change()  //根据遥控器的mode值，切换驾驶模式
   }
 }
 
+
+bool I2CRead(uint8_t Address, uint8_t Register, uint8_t Nbytes, uint8_t *Data)
+{
+    bool ret = true;
+
+    // Set register address
+    Wire.beginTransmission(Address);
+    Wire.write(Register);
+    if(Wire.endTransmission()) 
+    {
+      ret = false;
+      Serial.println("I2C Read Errro");      
+    }
+
+    // Read Nbytes
+    Wire.requestFrom(Address, Nbytes);
+    uint8_t index = 0;
+    while (Wire.available())
+    {
+        Data[index++] = Wire.read();
+    }
+
+    return ret;
+}
+
+uint16_t I2CReadValue(uint8_t addr, uint8_t reg)
+{
+  uint16_t ret = -1;
+
+  uint8_t data[2];      
+  if(I2CRead(addr, reg, 2, data))
+  {
+    ret = (uint16_t)data[0] << 8 | data[1];                   
+  }  
+  
+  return ret;
+}
+
+void I2CWriteValue(uint8_t Address, uint8_t Register, uint16_t Data)
+{
+    uint8_t* pData = (uint8_t*)&Data;         
+
+    // Set register address
+    Wire.beginTransmission(Address);
+    Wire.write(Register);
+    Wire.write(pData[1]);
+    Wire.write(pData[0]);
+    if(Wire.endTransmission()) 
+    {
+      Serial.println("I2C Write Error");      
+    }
+}
+
+void read_ina219(){
+  Serial.printf("%d: %f mA\r\n", 1, I2CReadValue(0x41, 1) / 100.0 / 0.01);
+  Serial.printf("%d: %f V\r\n", 2, I2CReadValue(0x41, 2) / 2 / 1000.0);
+}
+
+
 void setup() {
 	Serial.begin(115200);
+  Wire.begin(2, 3, 400000L); // SDA, SCL, 400kHz
     // Set the RC receiver pins as inputs and attach the interrupts
   for (int i = 0; i < 4; i++) {
     pinMode(CH1_PIN + i, INPUT);
@@ -143,6 +204,7 @@ void setup() {
 
 void loop() {
   //  Serial.print("STA MAC: "); Serial.println(WiFi.macAddress());
+  read_ina219();
 
   if (Serial.available()){
       String CMD = Serial.readStringUntil('\n');
