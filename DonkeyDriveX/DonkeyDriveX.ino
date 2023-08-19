@@ -3,6 +3,15 @@
 #include <Wire.h>
 #include <Adafruit_MPU6050.h>
 #include <Adafruit_Sensor.h>
+#include <FastLED.h>
+
+#define LED_PIN     10
+#define NUM_LEDS    1
+#define BRIGHTNESS  64
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB
+
+CRGB leds[NUM_LEDS];
 
 Adafruit_MPU6050 mpu;
 
@@ -305,7 +314,24 @@ void setup() {
 
 	// esp_now_register_recv_cb(OnDataRecv);
   
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(BRIGHTNESS);
+
+  leds[0] = CRGB::Pink;
+  FastLED.show();
+  delay(1000);
+
+  leds[0] = CRGB::Green;
+  FastLED.show();
+  delay(1000);
+
+  leds[0] = CRGB::Blue;
+  FastLED.show();
+  delay(1000);
+
   //SETUP ENDS
+
+  
 }
 
 
